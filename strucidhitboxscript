@@ -1,5 +1,4 @@
--- AdvanceTech | Strucid | Revamped (No Silent Aim + Rapid Fire + No Fall)
--- Head Hitbox + Fly + Rapid Fire + No Fall Damage
+-- AdvanceTech | Strucid | Safe Rapid Fire + Head Hitbox + Fly + No Fall
 
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -36,7 +35,6 @@ local function endFly()
     flying = false
 end
 
--- Fly Movement
 local move = {W=false,S=false,A=false,D=false,Moving=false}
 
 UserInput.InputBegan:Connect(function(i,gp) 
@@ -51,7 +49,7 @@ UserInput.InputEnded:Connect(function(i,gp)
     if move[k] ~= nil then 
         move[k] = false 
         local m = false
-        for _,v in pairs(move) do if v then m=true end end
+        for _,v in pairs(move) do if v then m = true end end
         move.Moving = m
     end
 end)
@@ -60,7 +58,6 @@ RunService.Heartbeat:Connect(function(dt)
     if flying and flyChar and flyChar.PrimaryPart then
         local cf = flyCam.CFrame
         flyChar:SetPrimaryPartCFrame(CFrame.new(flyChar.PrimaryPart.Position) * CFrame.Angles(cf:ToEulerAnglesXYZ()))
-        
         if move.Moving then
             local dir = Vector3.new()
             if move.W then dir += cf.LookVector end
@@ -72,7 +69,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- ==================== HEAD HITBOX (No Collision) ====================
+-- ==================== HEAD HITBOX ====================
 local headEnabled = false
 local headSize = 14
 local headTrans = 0.6
@@ -85,7 +82,6 @@ local function updateHeads()
             local head = plr.Character:FindFirstChild("Head")
             if head then
                 if not originalSizes[plr] then originalSizes[plr] = head.Size end
-                
                 if headEnabled then
                     head.Size = Vector3.new(headSize, headSize, headSize)
                     head.Transparency = headTrans
@@ -102,35 +98,25 @@ local function updateHeads()
     end
 end
 
--- ==================== RAPID FIRE ====================
+-- ==================== SAFE RAPID FIRE ====================
 local rapidFireEnabled = false
-local oldFireRate
 
-local function enableRapidFire()
+local function applyRapidFire()
     pcall(function()
+        local tool = Player.Character and Player.Character:FindFirstChildOfClass("Tool")
+        if not tool then return end
+        
         local gunModule = require(Player.PlayerGui:WaitForChild("MainGui").NewLocal.Tools.Tool.Gun)
         if gunModule then
-            oldFireRate = gunModule.FireRate or 0.1
-            gunModule.FireRate = 0.05  -- Very fast
-            -- Some games use Cooldown or Rate
-            if gunModule.Cooldown then gunModule.Cooldown = 0.05 end
-        end
-    end)
-end
-
-local function disableRapidFire()
-    pcall(function()
-        local gunModule = require(Player.PlayerGui:WaitForChild("MainGui").NewLocal.Tools.Tool.Gun)
-        if gunModule and oldFireRate then
-            gunModule.FireRate = oldFireRate
-            if gunModule.Cooldown then gunModule.Cooldown = oldFireRate end
+            -- Safer method: reduce cooldowns only
+            if gunModule.FireRate then gunModule.FireRate = 0.06 end
+            if gunModule.Cooldown then gunModule.Cooldown = 0.06 end
+            if gunModule.ReloadTime then gunModule.ReloadTime = 0.8 end
         end
     end)
 end
 
 -- ==================== NO FALL DAMAGE ====================
-local noFallEnabled = false
-
 local function noFallDamage()
     local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
     if hum then
@@ -180,21 +166,23 @@ tab:Label("⚡ Combat")
 tab:Toggle("Rapid Fire", false, function(s)
     rapidFireEnabled = s
     if s then
-        enableRapidFire()
-        -- Keep updating in case you switch guns
-        RunService.Heartbeat:Connect(function()
-            if rapidFireEnabled then enableRapidFire() end
-        end)
+        print("Rapid Fire Enabled (Safe Mode)")
     else
-        disableRapidFire()
+        print("Rapid Fire Disabled")
     end
 end)
 
-tab:Toggle("No Fall Damage", true, function(s)  -- Default ON
-    noFallEnabled = s
+tab:Toggle("No Fall Damage", true, function(s)
     if s then
         RunService.Heartbeat:Connect(noFallDamage)
     end
 end)
 
-print("✅ AdvanceTech Strucid Loaded! | Press P to open menu")
+-- Safe Rapid Fire Loop (only when holding gun)
+RunService.Heartbeat:Connect(function()
+    if rapidFireEnabled then
+        applyRapidFire()
+    end
+end)
+
+print("✅ AdvanceTech Strucid Loaded | Press P")

@@ -1,5 +1,5 @@
--- AdvanceTech | Strucid | Revamped Headshot Hitbox
--- Fixed | No Collision | Clean UI
+-- AdvanceTech | Strucid | Revamped (No Silent Aim + Rapid Fire + No Fall)
+-- Head Hitbox + Fly + Rapid Fire + No Fall Damage
 
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -9,61 +9,57 @@ local UserInput = game:GetService("UserInputService")
 -- ==================== FLY ====================
 local flySettings = {flyspeed = 60}
 local flying = false
-local flyBodyVelocity, flyBodyAngular, flyCharacter, flyHumanoid, flyCam
+local flyBV, flyBAV, flyChar, flyHum, flyCam
 
 local function startFly()
-    if flying then return end
-    flyCharacter = Player.Character
-    if not flyCharacter then return end
-    flyHumanoid = flyCharacter:FindFirstChild("Humanoid")
-    if not flyHumanoid then return end
+    if flying or not Player.Character then return end
+    flyChar = Player.Character
+    flyHum = flyChar:FindFirstChild("Humanoid")
+    if not flyHum then return end
     
-    flyHumanoid.PlatformStand = true
+    flyHum.PlatformStand = true
     flyCam = workspace.CurrentCamera
     
-    flyBodyVelocity = Instance.new("BodyVelocity")
-    flyBodyAngular = Instance.new("BodyAngularVelocity")
-    
-    flyBodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    flyBodyAngular.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-    
-    flyBodyVelocity.Parent = flyCharacter.Head
-    flyBodyAngular.Parent = flyCharacter.Head
+    flyBV = Instance.new("BodyVelocity")
+    flyBAV = Instance.new("BodyAngularVelocity")
+    flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+    flyBAV.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    flyBV.Parent = flyChar.Head
+    flyBAV.Parent = flyChar.Head
     flying = true
 end
 
 local function endFly()
-    if flyHumanoid then flyHumanoid.PlatformStand = false end
-    if flyBodyVelocity then flyBodyVelocity:Destroy() end
-    if flyBodyAngular then flyBodyAngular:Destroy() end
+    if flyHum then flyHum.PlatformStand = false end
+    if flyBV then flyBV:Destroy() end
+    if flyBAV then flyBAV:Destroy() end
     flying = false
 end
 
--- Fly Controls
-local move = {W=false, S=false, A=false, D=false, Moving=false}
+-- Fly Movement
+local move = {W=false,S=false,A=false,D=false,Moving=false}
 
-UserInput.InputBegan:Connect(function(i, gp)
+UserInput.InputBegan:Connect(function(i,gp) 
     if gp then return end
-    if move[i.KeyCode.Name] ~= nil then
-        move[i.KeyCode.Name] = true
-        move.Moving = true
-    end
+    local k = i.KeyCode.Name
+    if move[k] ~= nil then move[k] = true; move.Moving = true end
 end)
 
-UserInput.InputEnded:Connect(function(i, gp)
+UserInput.InputEnded:Connect(function(i,gp)
     if gp then return end
-    if move[i.KeyCode.Name] ~= nil then
-        move[i.KeyCode.Name] = false
+    local k = i.KeyCode.Name
+    if move[k] ~= nil then 
+        move[k] = false 
         local m = false
-        for _,v in pairs(move) do if v then m = true end end
+        for _,v in pairs(move) do if v then m=true end end
         move.Moving = m
     end
 end)
 
 RunService.Heartbeat:Connect(function(dt)
-    if flying and flyCharacter and flyCharacter.PrimaryPart then
+    if flying and flyChar and flyChar.PrimaryPart then
         local cf = flyCam.CFrame
-        flyCharacter:SetPrimaryPartCFrame(CFrame.new(flyCharacter.PrimaryPart.Position) * CFrame.Angles(cf:ToEulerAnglesXYZ()))
+        flyChar:SetPrimaryPartCFrame(CFrame.new(flyChar.PrimaryPart.Position) * CFrame.Angles(cf:ToEulerAnglesXYZ()))
         
         if move.Moving then
             local dir = Vector3.new()
@@ -71,35 +67,32 @@ RunService.Heartbeat:Connect(function(dt)
             if move.S then dir -= cf.LookVector end
             if move.A then dir -= cf.RightVector end
             if move.D then dir += cf.RightVector end
-            flyCharacter:TranslateBy(dir * flySettings.flyspeed * dt)
+            flyChar:TranslateBy(dir * flySettings.flyspeed * dt)
         end
     end
 end)
 
--- ==================== HEAD HITBOX ====================
+-- ==================== HEAD HITBOX (No Collision) ====================
 local headEnabled = false
 local headSize = 14
 local headTrans = 0.6
 local originalSizes = {}
+local headConn
 
-local headConnection
-
-local function updateHeadHitboxes()
+local function updateHeads()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= Player and plr.Character then
             local head = plr.Character:FindFirstChild("Head")
             if head then
-                if not originalSizes[plr] then
-                    originalSizes[plr] = head.Size
-                end
+                if not originalSizes[plr] then originalSizes[plr] = head.Size end
                 
                 if headEnabled then
                     head.Size = Vector3.new(headSize, headSize, headSize)
                     head.Transparency = headTrans
-                    head.CanCollide = false          -- NO COLLISION
+                    head.CanCollide = false
                     head.Massless = true
                 else
-                    head.Size = originalSizes[plr] or Vector3.new(1.2, 1.2, 1.2)
+                    head.Size = originalSizes[plr] or Vector3.new(1.2,1.2,1.2)
                     head.Transparency = 0
                     head.CanCollide = true
                     head.Massless = false
@@ -109,50 +102,99 @@ local function updateHeadHitboxes()
     end
 end
 
--- ==================== UI ====================
-local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))()
-local win = lib:Window("AdvanceTech | Strucid", Color3.fromRGB(255, 170, 0), Enum.KeyCode.P)
+-- ==================== RAPID FIRE ====================
+local rapidFireEnabled = false
+local oldFireRate
 
-local main = win:Tab("Main")
-
-main:Label("🎯 Headshot Hitbox")
-main:Toggle("Enable Head Hitbox", false, function(state)
-    headEnabled = state
-    if state then
-        if headConnection then headConnection:Disconnect() end
-        headConnection = RunService.Stepped:Connect(updateHeadHitboxes)
-    else
-        if headConnection then 
-            headConnection:Disconnect() 
-            headConnection = nil 
+local function enableRapidFire()
+    pcall(function()
+        local gunModule = require(Player.PlayerGui:WaitForChild("MainGui").NewLocal.Tools.Tool.Gun)
+        if gunModule then
+            oldFireRate = gunModule.FireRate or 0.1
+            gunModule.FireRate = 0.05  -- Very fast
+            -- Some games use Cooldown or Rate
+            if gunModule.Cooldown then gunModule.Cooldown = 0.05 end
         end
-        updateHeadHitboxes()
+    end)
+end
+
+local function disableRapidFire()
+    pcall(function()
+        local gunModule = require(Player.PlayerGui:WaitForChild("MainGui").NewLocal.Tools.Tool.Gun)
+        if gunModule and oldFireRate then
+            gunModule.FireRate = oldFireRate
+            if gunModule.Cooldown then gunModule.Cooldown = oldFireRate end
+        end
+    end)
+end
+
+-- ==================== NO FALL DAMAGE ====================
+local noFallEnabled = false
+
+local function noFallDamage()
+    local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+    if hum then
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+    end
+end
+
+-- ==================== GUI ====================
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))()
+local win = lib:Window("AdvanceTech | Strucid", Color3.fromRGB(255, 140, 0), Enum.KeyCode.P)
+
+local tab = win:Tab("Main")
+
+tab:Label("🎯 Head Hitbox")
+tab:Toggle("Enable Head Hitbox", false, function(s)
+    headEnabled = s
+    if s then
+        if headConn then headConn:Disconnect() end
+        headConn = RunService.Stepped:Connect(updateHeads)
+    else
+        if headConn then headConn:Disconnect() end
+        updateHeads()
     end
 end)
 
-main:Slider("Head Size", 1, 35, 14, function(v)
+tab:Slider("Head Size", 1, 35, 14, function(v)
     headSize = v
-    if headEnabled then updateHeadHitboxes() end
+    if headEnabled then updateHeads() end
 end)
 
-main:Slider("Transparency", 0, 1, 0.6, function(v)
+tab:Slider("Head Transparency", 0, 1, 0.6, function(v)
     headTrans = v
-    if headEnabled then updateHeadHitboxes() end
+    if headEnabled then updateHeads() end
 end)
 
-main:Label("🕹️ Fly")
-main:Toggle("Enable Fly", false, function(state)
-    if state then startFly() else endFly() end
+tab:Label("🕹️ Movement")
+tab:Toggle("Fly", false, function(s)
+    if s then startFly() else endFly() end
 end)
 
-main:Slider("Fly Speed", 10, 200, 60, function(v)
+tab:Slider("Fly Speed", 10, 200, 60, function(v)
     flySettings.flyspeed = v
 end)
 
-main:Label("🔫 Silent Aim (Basic)")
-main:Toggle("Silent Aim (Head)", false, function(state)
-    -- Simple version - you can expand later
-    print("Silent Aim:", state and "ON" or "OFF")
+tab:Label("⚡ Combat")
+tab:Toggle("Rapid Fire", false, function(s)
+    rapidFireEnabled = s
+    if s then
+        enableRapidFire()
+        -- Keep updating in case you switch guns
+        RunService.Heartbeat:Connect(function()
+            if rapidFireEnabled then enableRapidFire() end
+        end)
+    else
+        disableRapidFire()
+    end
 end)
 
-print("✅ AdvanceTech Strucid Loaded Successfully | Press P")
+tab:Toggle("No Fall Damage", true, function(s)  -- Default ON
+    noFallEnabled = s
+    if s then
+        RunService.Heartbeat:Connect(noFallDamage)
+    end
+end)
+
+print("✅ AdvanceTech Strucid Loaded! | Press P to open menu")

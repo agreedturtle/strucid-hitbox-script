@@ -1,54 +1,74 @@
--- AdvanceTech Strucid | Headshot Hitbox + Fly
+-- AdvanceTech | Strucid | Headshot Hitbox Script
+-- Fixed & Cleaned Version
 
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Fly Settings
 local flySettings = {flyspeed = 50}
-local c, h, bv, bav, cam, flying = nil, nil, nil, nil, nil, false
-local p = game.Players.LocalPlayer
-local buttons = {W=false, S=false, A=false, D=false, Moving=false}
+local flying = false
+local c, h, bv, bav, cam = nil, nil, nil, nil, nil
 
--- Fly Script
-local startFly = function()
-    if not p.Character or flying then return end
-    c = p.Character
+local buttons = {W = false, S = false, A = false, D = false, Moving = false}
+
+-- Start Fly
+local function startFly()
+    if flying or not Player.Character then return end
+    c = Player.Character
     h = c:FindFirstChild("Humanoid")
     if not h then return end
+    
     h.PlatformStand = true
     cam = workspace.CurrentCamera
-    bv = Instance.new("BodyVelocity", c.Head)
-    bav = Instance.new("BodyAngularVelocity", c.Head)
-    bv.MaxForce = Vector3.new(10000,10000,10000)
-    bav.MaxTorque = Vector3.new(10000,10000,10000)
+    
+    bv = Instance.new("BodyVelocity")
+    bav = Instance.new("BodyAngularVelocity")
+    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bav.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    bv.Parent = c.Head
+    bav.Parent = c.Head
     flying = true
 end
 
-local endFly = function()
+-- End Fly
+local function endFly()
     if h then h.PlatformStand = false end
     if bv then bv:Destroy() end
     if bav then bav:Destroy() end
     flying = false
 end
 
-game:GetService("UserInputService").InputBegan:Connect(function(input,GPE)
-    if GPE then return end
-    if buttons[input.KeyCode.Name] ~= nil then
-        buttons[input.KeyCode.Name] = true
+-- Input
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    local key = input.KeyCode.Name
+    if buttons[key] ~= nil then
+        buttons[key] = true
         buttons.Moving = true
     end
 end)
 
-game:GetService("UserInputService").InputEnded:Connect(function(input,GPE)
-    if GPE then return end
-    if buttons[input.KeyCode.Name] ~= nil then
-        buttons[input.KeyCode.Name] = false
+UserInputService.InputEnded:Connect(function(input, gp)
+    if gp then return end
+    local key = input.KeyCode.Name
+    if buttons[key] ~= nil then
+        buttons[key] = false
         local moving = false
-        for _,v in pairs(buttons) do if v == true then moving = true end end
+        for _, v in pairs(buttons) do
+            if v then moving = true end
+        end
         buttons.Moving = moving
     end
 end)
 
-game:GetService("RunService").Heartbeat:Connect(function(step)
+-- Fly Loop
+RunService.Heartbeat:Connect(function(step)
     if flying and c and c.PrimaryPart then
         local cf = cam.CFrame
         c:SetPrimaryPartCFrame(CFrame.new(c.PrimaryPart.Position) * CFrame.Angles(cf:ToEulerAnglesXYZ()))
+        
         if buttons.Moving then
             local t = Vector3.new()
             if buttons.W then t += cf.LookVector end
@@ -60,7 +80,7 @@ game:GetService("RunService").Heartbeat:Connect(function(step)
     end
 end)
 
--- UI + Features
+-- UI Library
 local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))()
 local win = lib:Window("AdvanceTech | Strucid", Color3.fromRGB(44, 120, 224), Enum.KeyCode.P)
 
@@ -72,18 +92,21 @@ local headSize = 12
 local headTrans = 0.7
 local originals = {}
 
-local function updateHeads()
-    for _, plr in pairs(game.Players:GetPlayers()) do
-        if plr ~= p and plr.Character then
+local function updateHeadHitboxes()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= Player and plr.Character then
             local head = plr.Character:FindFirstChild("Head")
             if head then
-                if not originals[plr] then originals[plr] = head.Size end
+                if not originals[plr] then
+                    originals[plr] = head.Size
+                end
+                
                 if headHitboxEnabled then
                     head.Size = Vector3.new(headSize, headSize, headSize)
                     head.Transparency = headTrans
                     head.CanCollide = false
                 else
-                    head.Size = originals[plr] or Vector3.new(1.2,1.2,1.2)
+                    head.Size = originals[plr] or Vector3.new(1.2, 1.2, 1.2)
                     head.Transparency = 0
                     head.CanCollide = true
                 end
@@ -93,23 +116,23 @@ local function updateHeads()
 end
 
 tab:Label("> Headshot Hitbox")
-tab:Toggle("Enable Head Hitbox", false, function(s)
-    headHitboxEnabled = s
-    if s then
-        game:GetService("RunService").Stepped:Connect(updateHeads)
+tab:Toggle("Enable Head Hitbox", false, function(state)
+    headHitboxEnabled = state
+    if state then
+        RunService.Stepped:Connect(updateHeadHitboxes)
     else
-        updateHeads()
+        updateHeadHitboxes()
     end
 end)
 
 tab:Slider("Head Size", 1, 30, 12, function(v)
     headSize = v
-    updateHeads()
+    updateHeadHitboxes()
 end)
 
 tab:Slider("Transparency", 0, 1, 0.7, function(v)
     headTrans = v
-    updateHeads()
+    updateHeadHitboxes()
 end)
 
-print("✅ Script Loaded | Press P to open menu")
+print("✅ AdvanceTech Strucid Script Loaded | Press P to open menu")

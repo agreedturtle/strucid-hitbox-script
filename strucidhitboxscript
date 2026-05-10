@@ -1,4 +1,4 @@
--- AdvanceTech | Strucid | Aggressive Gun Mods + Head Hitbox + Fly
+-- AdvanceTech | Strucid | INSANE Rapid Fire + Gun Mods
 
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -93,41 +93,43 @@ local function updateHeads()
     end
 end
 
--- ==================== AGGRESSIVE GUN MODS ====================
+-- ==================== INSANE GUN MODS ====================
 local rapidFire = false
 local noReload = false
-local moreDamage = false   -- Damage multiplier (may not work)
+local moreDamage = false
 
 local function applyGunMods()
     pcall(function()
-        local mainGui = Player:FindFirstChild("PlayerGui") and Player.PlayerGui:FindFirstChild("MainGui")
+        local mainGui = Player.PlayerGui:FindFirstChild("MainGui")
         if not mainGui then return end
         
         local gunModule = require(mainGui.NewLocal.Tools.Tool.Gun)
         if not gunModule then return end
 
-        -- Rapid Fire
+        -- === INSANE RAPID FIRE ===
         if rapidFire then
-            gunModule.FireRate = 0.05
-            gunModule.Cooldown = 0.05
-            if gunModule.ShotDelay then gunModule.ShotDelay = 0.05 end
-            if gunModule.BurstRate then gunModule.BurstRate = 0.05 end
+            gunModule.FireRate = 0.001          -- Extremely fast
+            gunModule.Cooldown = 0.001
+            if gunModule.ShotDelay then gunModule.ShotDelay = 0.001 end
+            if gunModule.BurstRate then gunModule.BurstRate = 0.001 end
+            if gunModule.Rate then gunModule.Rate = 0.001 end
         end
 
-        -- No Reload + Infinite Ammo
+        -- === NO RELOAD + INFINITE AMMO ===
         if noReload then
-            gunModule.ReloadTime = 0.1
-            gunModule.Ammo = 999
-            gunModule.MaxAmmo = 999
-            gunModule.CurrentAmmo = 999
-            if gunModule.ClipSize then gunModule.ClipSize = 999 end
-            if gunModule.AmmoInClip then gunModule.AmmoInClip = 999 end
+            gunModule.ReloadTime = 0.05
+            gunModule.Ammo = 9999
+            gunModule.MaxAmmo = 9999
+            gunModule.CurrentAmmo = 9999
+            if gunModule.ClipSize then gunModule.ClipSize = 9999 end
+            if gunModule.AmmoInClip then gunModule.AmmoInClip = 9999 end
         end
 
-        -- More Damage (might not replicate to server)
+        -- === MORE DAMAGE ===
         if moreDamage then
-            if gunModule.Damage then gunModule.Damage = gunModule.Damage * 2.5 end
-            if gunModule.HeadshotMultiplier then gunModule.HeadshotMultiplier = 5 end
+            if gunModule.Damage then gunModule.Damage = gunModule.Damage * 3 end
+            if gunModule.HeadshotMultiplier then gunModule.HeadshotMultiplier = 10 end
+            if gunModule.BulletDamage then gunModule.BulletDamage = gunModule.BulletDamage * 3 end
         end
     end)
 end
@@ -145,7 +147,7 @@ end
 
 -- ==================== GUI ====================
 local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))()
-local win = lib:Window("AdvanceTech | Strucid", Color3.fromRGB(255, 140, 0), Enum.KeyCode.P)
+local win = lib:Window("AdvanceTech | Strucid", Color3.fromRGB(255, 50, 50), Enum.KeyCode.P)
 
 local tab = win:Tab("Main")
 
@@ -161,26 +163,26 @@ tab:Toggle("Enable Head Hitbox", false, function(s)
     end
 end)
 
-tab:Slider("Head Size", 1, 35, 14, function(v) headSize = v; if headEnabled then updateHeads() end end)
-tab:Slider("Head Transparency", 0, 1, 0.6, function(v) headTrans = v; if headEnabled then updateHeads() end end)
+tab:Slider("Head Size", 1, 35, 14, function(v) headSize = v if headEnabled then updateHeads() end end)
+tab:Slider("Head Transparency", 0, 1, 0.6, function(v) headTrans = v if headEnabled then updateHeads() end end)
 
 tab:Label("🕹️ Movement")
 tab:Toggle("Fly", false, function(s) if s then startFly() else endFly() end end)
 tab:Slider("Fly Speed", 10, 200, 60, function(v) flySettings.flyspeed = v end)
 
-tab:Label("⚡ Combat")
-tab:Toggle("Rapid Fire", false, function(s) rapidFire = s end)
-tab:Toggle("No Reload", false, function(s) noReload = s end)
-tab:Toggle("More Damage (x2.5)", false, function(s) moreDamage = s end)
+tab:Label("⚡ Combat (Gun Mods)")
+tab:Toggle("INSANE Rapid Fire", false, function(s) rapidFire = s end)
+tab:Toggle("No Reload + Infinite Ammo", false, function(s) noReload = s end)
+tab:Toggle("More Damage (x3)", false, function(s) moreDamage = s end)
 tab:Toggle("No Fall Damage", true, function(s)
     if s then RunService.Heartbeat:Connect(noFall) end
 end)
 
--- Gun Mods Loop
+-- Main Gun Mods Loop
 RunService.Heartbeat:Connect(function()
     if rapidFire or noReload or moreDamage then
         applyGunMods()
     end
 end)
 
-print("✅ AdvanceTech Strucid Loaded | Press P to open menu")
+print("✅ AdvanceTech Strucid Loaded | Press P | INSANE Rapid Fire Active")

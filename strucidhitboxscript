@@ -1,105 +1,89 @@
--- AdvanceTech | Strucid | V2 | Headshot Hitbox Added
--- YellowGreg#7993
+-- AdvanceTech Strucid | Headshot Hitbox + Fly
 
---[[ FLY SCRIPT ]]--
-local flySettings = {fly = false, flyspeed = 50}
-local c, h, bv, bav, cam, flying, p = nil, nil, nil, nil, nil, false, game.Players.LocalPlayer
-local buttons = {W=false,S=false,A=false,D=false,Moving=false}
+local flySettings = {flyspeed = 50}
+local c, h, bv, bav, cam, flying = nil, nil, nil, nil, nil, false
+local p = game.Players.LocalPlayer
+local buttons = {W=false, S=false, A=false, D=false, Moving=false}
 
+-- Fly Script
 local startFly = function()
-    if not p.Character or not p.Character:FindFirstChild("Head") or flying then return end
+    if not p.Character or flying then return end
     c = p.Character
-    h = c.Humanoid
+    h = c:FindFirstChild("Humanoid")
+    if not h then return end
     h.PlatformStand = true
     cam = workspace.CurrentCamera
-    bv = Instance.new("BodyVelocity")
-    bav = Instance.new("BodyAngularVelocity")
-    bv.Velocity, bv.MaxForce, bv.P = Vector3.new(0,0,0), Vector3.new(10000,10000,10000), 1000
-    bav.AngularVelocity, bav.MaxTorque, bav.P = Vector3.new(0,0,0), Vector3.new(10000,10000,10000), 1000
-    bv.Parent = c.Head
-    bav.Parent = c.Head
+    bv = Instance.new("BodyVelocity", c.Head)
+    bav = Instance.new("BodyAngularVelocity", c.Head)
+    bv.MaxForce = Vector3.new(10000,10000,10000)
+    bav.MaxTorque = Vector3.new(10000,10000,10000)
     flying = true
 end
 
 local endFly = function()
-    if not p.Character or not flying then return end
-    h.PlatformStand = false
+    if h then h.PlatformStand = false end
     if bv then bv:Destroy() end
     if bav then bav:Destroy() end
     flying = false
 end
 
-game:GetService("UserInputService").InputBegan:Connect(function(input, GPE)
+game:GetService("UserInputService").InputBegan:Connect(function(input,GPE)
     if GPE then return end
-    for i in pairs(buttons) do
-        if i ~= "Moving" and input.KeyCode == Enum.KeyCode[i] then
-            buttons[i] = true
-            buttons.Moving = true
-        end
+    if buttons[input.KeyCode.Name] ~= nil then
+        buttons[input.KeyCode.Name] = true
+        buttons.Moving = true
     end
 end)
 
-game:GetService("UserInputService").InputEnded:Connect(function(input, GPE)
+game:GetService("UserInputService").InputEnded:Connect(function(input,GPE)
     if GPE then return end
-    local a = false
-    for i in pairs(buttons) do
-        if i ~= "Moving" then
-            if input.KeyCode == Enum.KeyCode[i] then buttons[i] = false end
-            if buttons[i] then a = true end
-        end
+    if buttons[input.KeyCode.Name] ~= nil then
+        buttons[input.KeyCode.Name] = false
+        local moving = false
+        for _,v in pairs(buttons) do if v == true then moving = true end end
+        buttons.Moving = moving
     end
-    buttons.Moving = a
 end)
-
-local setVec = function(vec) return vec * (flySettings.flyspeed / vec.Magnitude) end
 
 game:GetService("RunService").Heartbeat:Connect(function(step)
     if flying and c and c.PrimaryPart then
-        local pos = c.PrimaryPart.Position
         local cf = cam.CFrame
-        local ax, ay, az = cf:ToEulerAnglesXYZ()
-        c:SetPrimaryPartCFrame(CFrame.new(pos) * CFrame.Angles(ax, ay, az))
+        c:SetPrimaryPartCFrame(CFrame.new(c.PrimaryPart.Position) * CFrame.Angles(cf:ToEulerAnglesXYZ()))
         if buttons.Moving then
             local t = Vector3.new()
-            if buttons.W then t += setVec(cf.LookVector) end
-            if buttons.S then t -= setVec(cf.LookVector) end
-            if buttons.A then t -= setVec(cf.RightVector) end
-            if buttons.D then t += setVec(cf.RightVector) end
-            c:TranslateBy(t * step)
+            if buttons.W then t += cf.LookVector end
+            if buttons.S then t -= cf.LookVector end
+            if buttons.A then t -= cf.RightVector end
+            if buttons.D then t += cf.RightVector end
+            c:TranslateBy(t * flySettings.flyspeed * step)
         end
     end
 end)
 
--- Services
-local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-local CurrentCam = Workspace.CurrentCamera
-
--- UI Library
+-- UI + Features
 local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))()
-local win = lib:Window("AdvanceTech | Strucid | V2", Color3.fromRGB(44, 120, 224), Enum.KeyCode.P)
+local win = lib:Window("AdvanceTech | Strucid", Color3.fromRGB(44, 120, 224), Enum.KeyCode.P)
 
--- ==================== HEADSHOT HITBOX ====================
+local tab = win:Tab("Main")
+
+-- Headshot Hitbox
 local headHitboxEnabled = false
-local headHitboxSize = 12
-local headHitboxTransparency = 0.7
-local headOriginalSizes = {}
+local headSize = 12
+local headTrans = 0.7
+local originals = {}
 
-local function updateHeadHitboxes()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= Player and plr.Character then
+local function updateHeads()
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr ~= p and plr.Character then
             local head = plr.Character:FindFirstChild("Head")
             if head then
-                if not headOriginalSizes[plr] then
-                    headOriginalSizes[plr] = head.Size
-                end
+                if not originals[plr] then originals[plr] = head.Size end
                 if headHitboxEnabled then
-                    head.Size = Vector3.new(headHitboxSize, headHitboxSize, headHitboxSize)
-                    head.Transparency = headHitboxTransparency
+                    head.Size = Vector3.new(headSize, headSize, headSize)
+                    head.Transparency = headTrans
                     head.CanCollide = false
                 else
-                    head.Size = headOriginalSizes[plr] or Vector3.new(1.2, 1.2, 1.2)
+                    head.Size = originals[plr] or Vector3.new(1.2,1.2,1.2)
                     head.Transparency = 0
                     head.CanCollide = true
                 end
@@ -108,74 +92,24 @@ local function updateHeadHitboxes()
     end
 end
 
--- Main Tab
-local tab = win:Tab("Main")
-
-tab:Label("> Silent Aim")
-local silentAimEnabled = false
-tab:Toggle("Silent Aim", false, function(state)
-    silentAimEnabled = state
-    -- Silent Aim code (your improved version)
-    local function getClosestEnemy()
-        local closest, dist = nil, math.huge
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                local root = v.Character.HumanoidRootPart
-                local d = (root.Position - CurrentCam.CFrame.Position).Magnitude
-                if d < dist then
-                    closest = v
-                    dist = d
-                end
-            end
-        end
-        return closest
-    end
-
-    local function hookGun()
-        local success, gunModule = pcall(function()
-            return require(Player.PlayerGui:WaitForChild("MainGui").NewLocal.Tools.Tool.Gun)
-        end)
-        if success and gunModule then
-            local old = gunModule.ConeOfFire
-            gunModule.ConeOfFire = function(...)
-                if silentAimEnabled then
-                    local target = getClosestEnemy()
-                    if target and target.Character and target.Character:FindFirstChild("Head") then
-                        return target.Character.Head.CFrame * CFrame.new(math.random(-0.4,0.4), math.random(-0.4,0.4), math.random(-0.4,0.4)).Position
-                    end
-                end
-                return old(...)
-            end
-        end
-    end
-
-    hookGun()
-    Player.CharacterAdded:Connect(hookGun)
-end)
-
 tab:Label("> Headshot Hitbox")
-local headConnection
-tab:Toggle("Head Hitbox", false, function(state)
-    headHitboxEnabled = state
-    if state then
-        if headConnection then headConnection:Disconnect() end
-        headConnection = game:GetService("RunService").Stepped:Connect(updateHeadHitboxes)
+tab:Toggle("Enable Head Hitbox", false, function(s)
+    headHitboxEnabled = s
+    if s then
+        game:GetService("RunService").Stepped:Connect(updateHeads)
     else
-        if headConnection then headConnection:Disconnect() end
-        updateHeadHitboxes()
+        updateHeads()
     end
 end)
 
 tab:Slider("Head Size", 1, 30, 12, function(v)
-    headHitboxSize = v
-    updateHeadHitboxes()
+    headSize = v
+    updateHeads()
 end)
 
-tab:Slider("Head Transparency", 0, 1, 0.7, function(v)
-    headHitboxTransparency = v
-    updateHeadHitboxes()
+tab:Slider("Transparency", 0, 1, 0.7, function(v)
+    headTrans = v
+    updateHeads()
 end)
 
--- Add your other tabs (Hitbox, ESP, Player, Settings) here if you want...
-
-print("AdvanceTech Strucid Script Loaded!")
+print("✅ Script Loaded | Press P to open menu")

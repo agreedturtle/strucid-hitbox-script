@@ -1,4 +1,4 @@
--- AdvanceTech | Strucid | Safe Rapid Fire + Head Hitbox + Fly + No Fall
+-- AdvanceTech | Strucid | Improved Rapid Fire + No Reload + No Fall
 
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -98,20 +98,27 @@ local function updateHeads()
     end
 end
 
--- ==================== SAFE RAPID FIRE ====================
+-- ==================== GUN MODS (Rapid Fire + No Reload) ====================
 local rapidFireEnabled = false
+local noReloadEnabled = false
 
-local function applyRapidFire()
+local function applyGunMods()
     pcall(function()
-        local tool = Player.Character and Player.Character:FindFirstChildOfClass("Tool")
-        if not tool then return end
+        local gui = Player:WaitForChild("PlayerGui"):FindFirstChild("MainGui")
+        if not gui then return end
         
-        local gunModule = require(Player.PlayerGui:WaitForChild("MainGui").NewLocal.Tools.Tool.Gun)
-        if gunModule then
-            -- Safer method: reduce cooldowns only
-            if gunModule.FireRate then gunModule.FireRate = 0.06 end
-            if gunModule.Cooldown then gunModule.Cooldown = 0.06 end
-            if gunModule.ReloadTime then gunModule.ReloadTime = 0.8 end
+        local gunModule = require(gui.NewLocal.Tools.Tool.Gun)
+        if not gunModule then return end
+
+        if rapidFireEnabled then
+            gunModule.FireRate = 0.07          -- Fast but stable
+            if gunModule.Cooldown then gunModule.Cooldown = 0.07 end
+        end
+
+        if noReloadEnabled then
+            gunModule.ReloadTime = 0.1
+            if gunModule.Ammo then gunModule.Ammo = 999 end
+            if gunModule.MaxAmmo then gunModule.MaxAmmo = 999 end
         end
     end)
 end
@@ -122,6 +129,7 @@ local function noFallDamage()
     if hum then
         hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
         hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
     end
 end
 
@@ -165,11 +173,10 @@ end)
 tab:Label("⚡ Combat")
 tab:Toggle("Rapid Fire", false, function(s)
     rapidFireEnabled = s
-    if s then
-        print("Rapid Fire Enabled (Safe Mode)")
-    else
-        print("Rapid Fire Disabled")
-    end
+end)
+
+tab:Toggle("No Reload", false, function(s)
+    noReloadEnabled = s
 end)
 
 tab:Toggle("No Fall Damage", true, function(s)
@@ -178,10 +185,10 @@ tab:Toggle("No Fall Damage", true, function(s)
     end
 end)
 
--- Safe Rapid Fire Loop (only when holding gun)
+-- Gun Mods Loop
 RunService.Heartbeat:Connect(function()
-    if rapidFireEnabled then
-        applyRapidFire()
+    if rapidFireEnabled or noReloadEnabled then
+        applyGunMods()
     end
 end)
 

@@ -1,4 +1,4 @@
--- AdvanceTech | Strucid | Improved Rapid Fire + No Reload + No Fall
+-- AdvanceTech | Strucid | Better Gun Mods (2026)
 
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -15,16 +15,12 @@ local function startFly()
     flyChar = Player.Character
     flyHum = flyChar:FindFirstChild("Humanoid")
     if not flyHum then return end
-    
     flyHum.PlatformStand = true
     flyCam = workspace.CurrentCamera
-    
-    flyBV = Instance.new("BodyVelocity")
-    flyBAV = Instance.new("BodyAngularVelocity")
+    flyBV = Instance.new("BodyVelocity", flyChar.Head)
+    flyBAV = Instance.new("BodyAngularVelocity", flyChar.Head)
     flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
     flyBAV.MaxTorque = Vector3.new(1e5,1e5,1e5)
-    flyBV.Parent = flyChar.Head
-    flyBAV.Parent = flyChar.Head
     flying = true
 end
 
@@ -37,7 +33,7 @@ end
 
 local move = {W=false,S=false,A=false,D=false,Moving=false}
 
-UserInput.InputBegan:Connect(function(i,gp) 
+UserInput.InputBegan:Connect(function(i,gp)
     if gp then return end
     local k = i.KeyCode.Name
     if move[k] ~= nil then move[k] = true; move.Moving = true end
@@ -47,7 +43,7 @@ UserInput.InputEnded:Connect(function(i,gp)
     if gp then return end
     local k = i.KeyCode.Name
     if move[k] ~= nil then 
-        move[k] = false 
+        move[k] = false
         local m = false
         for _,v in pairs(move) do if v then m = true end end
         move.Moving = m
@@ -91,45 +87,46 @@ local function updateHeads()
                     head.Size = originalSizes[plr] or Vector3.new(1.2,1.2,1.2)
                     head.Transparency = 0
                     head.CanCollide = true
-                    head.Massless = false
                 end
             end
         end
     end
 end
 
--- ==================== GUN MODS (Rapid Fire + No Reload) ====================
-local rapidFireEnabled = false
-local noReloadEnabled = false
+-- ==================== GUN MODS (Improved) ====================
+local rapidFire = false
+local noReload = false
 
 local function applyGunMods()
     pcall(function()
-        local gui = Player:WaitForChild("PlayerGui"):FindFirstChild("MainGui")
-        if not gui then return end
+        local mainGui = Player:FindFirstChild("PlayerGui") and Player.PlayerGui:FindFirstChild("MainGui")
+        if not mainGui then return end
         
-        local gunModule = require(gui.NewLocal.Tools.Tool.Gun)
+        local gunModule = require(mainGui.NewLocal.Tools.Tool.Gun)
         if not gunModule then return end
 
-        if rapidFireEnabled then
-            gunModule.FireRate = 0.07          -- Fast but stable
-            if gunModule.Cooldown then gunModule.Cooldown = 0.07 end
+        if rapidFire then
+            gunModule.FireRate = 0.08
+            if gunModule.Cooldown then gunModule.Cooldown = 0.08 end
         end
 
-        if noReloadEnabled then
+        if noReload then
             gunModule.ReloadTime = 0.1
             if gunModule.Ammo then gunModule.Ammo = 999 end
             if gunModule.MaxAmmo then gunModule.MaxAmmo = 999 end
+            if gunModule.CurrentAmmo then gunModule.CurrentAmmo = 999 end
         end
     end)
 end
 
 -- ==================== NO FALL DAMAGE ====================
-local function noFallDamage()
+local function noFall()
     local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
     if hum then
-        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-        hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+        pcall(function()
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        end)
     end
 end
 
@@ -151,45 +148,25 @@ tab:Toggle("Enable Head Hitbox", false, function(s)
     end
 end)
 
-tab:Slider("Head Size", 1, 35, 14, function(v)
-    headSize = v
-    if headEnabled then updateHeads() end
-end)
-
-tab:Slider("Head Transparency", 0, 1, 0.6, function(v)
-    headTrans = v
-    if headEnabled then updateHeads() end
-end)
+tab:Slider("Head Size", 1, 35, 14, function(v) headSize = v; if headEnabled then updateHeads() end end)
+tab:Slider("Head Transparency", 0, 1, 0.6, function(v) headTrans = v; if headEnabled then updateHeads() end end)
 
 tab:Label("🕹️ Movement")
-tab:Toggle("Fly", false, function(s)
-    if s then startFly() else endFly() end
-end)
-
-tab:Slider("Fly Speed", 10, 200, 60, function(v)
-    flySettings.flyspeed = v
-end)
+tab:Toggle("Fly", false, function(s) if s then startFly() else endFly() end end)
+tab:Slider("Fly Speed", 10, 200, 60, function(v) flySettings.flyspeed = v end)
 
 tab:Label("⚡ Combat")
-tab:Toggle("Rapid Fire", false, function(s)
-    rapidFireEnabled = s
-end)
-
-tab:Toggle("No Reload", false, function(s)
-    noReloadEnabled = s
-end)
-
+tab:Toggle("Rapid Fire", false, function(s) rapidFire = s end)
+tab:Toggle("No Reload", false, function(s) noReload = s end)
 tab:Toggle("No Fall Damage", true, function(s)
-    if s then
-        RunService.Heartbeat:Connect(noFallDamage)
-    end
+    if s then RunService.Heartbeat:Connect(noFall) end
 end)
 
--- Gun Mods Loop
+-- Main Loop for Gun Mods
 RunService.Heartbeat:Connect(function()
-    if rapidFireEnabled or noReloadEnabled then
+    if rapidFire or noReload then
         applyGunMods()
     end
 end)
 
-print("✅ AdvanceTech Strucid Loaded | Press P")
+print("✅ AdvanceTech Loaded | Press P")

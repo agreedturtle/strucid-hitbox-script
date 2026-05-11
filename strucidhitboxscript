@@ -1,83 +1,79 @@
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local UserInput = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")
 
 -- ==================== SETTINGS ====================
-local flySpeed = 60
+local flySpeed = 70
 local flying = false
 
 local hitboxEnabled = false
-local hitboxSize = 12
-local hitboxTransparency = 0.7
+local hitboxSize = 14
+local hitboxTransparency = 0.65
 
 local wallhackEnabled = false
 
 -- ==================== FLY ====================
-local flyBV, flyBAV, flyChar, flyHum, flyCam
+local flyBV, flyBAV
 
 local function startFly()
-    if flying or not Player.Character then return end
-    flyChar = Player.Character
-    flyHum = flyChar:FindFirstChild("Humanoid")
-    if not flyHum then return end
+    if flying then return end
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
-    flyHum.PlatformStand = true
-    flyCam = workspace.CurrentCamera
-    
-    flyBV = Instance.new("BodyVelocity", flyChar.HumanoidRootPart)
-    flyBAV = Instance.new("BodyAngularVelocity", flyChar.HumanoidRootPart)
-    
-    flyBV.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    flyBAV.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
     flying = true
+    local hum = char:FindFirstChild("Humanoid")
+    if hum then hum.PlatformStand = true end
+    
+    flyBV = Instance.new("BodyVelocity")
+    flyBV.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    flyBV.Parent = char.HumanoidRootPart
+    
+    flyBAV = Instance.new("BodyAngularVelocity")
+    flyBAV.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    flyBAV.Parent = char.HumanoidRootPart
 end
 
 local function endFly()
-    if flyHum then flyHum.PlatformStand = false end
+    flying = false
     if flyBV then flyBV:Destroy() end
     if flyBAV then flyBAV:Destroy() end
-    flying = false
+    local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+    if hum then hum.PlatformStand = false end
 end
 
 -- ==================== HITBOX + WALLHACK ====================
-local connections = {}
-
 local function updateHitboxes()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= Player and plr.Character then
             local root = plr.Character:FindFirstChild("HumanoidRootPart")
-            local humanoid = plr.Character:FindFirstChild("Humanoid")
-            
-            if root and humanoid then
-                -- Regular Hitbox (Whole Body)
+            if root then
                 if hitboxEnabled then
-                    root.Size = Vector3.new(hitboxSize, hitboxSize*2, hitboxSize)
+                    root.Size = Vector3.new(hitboxSize, hitboxSize * 2.2, hitboxSize)
                     root.Transparency = hitboxTransparency
                     root.CanCollide = false
                     root.Massless = true
-                    
-                    -- Wallhack (Chams)
-                    if wallhackEnabled then
-                        for _, part in pairs(plr.Character:GetChildren()) do
-                            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                                part.Transparency = 0.3
-                                part.Material = Enum.Material.ForceField
-                                part.Color = Color3.fromRGB(0, 255, 100)
-                            end
-                        end
-                    end
                 else
-                    -- Reset
-                    root.Size = Vector3.new(2, 2, 1)
+                    root.Size = Vector3.new(2, 4, 1)  -- Default Strucid size
                     root.Transparency = 0
                     root.CanCollide = true
-                    
-                    for _, part in pairs(plr.Character:GetChildren()) do
-                        if part:IsA("BasePart") then
-                            part.Transparency = 0
-                            part.Material = Enum.Material.Plastic
-                        end
+                end
+            end
+
+            -- Wallhack (Chams)
+            if wallhackEnabled then
+                for _, part in pairs(plr.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Transparency = 0.25
+                        part.Material = Enum.Material.ForceField
+                        part.Color = Color3.fromRGB(0, 255, 150)
+                    end
+                end
+            elseif not hitboxEnabled then
+                for _, part in pairs(plr.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Transparency = 0
+                        part.Material = Enum.Material.Plastic
                     end
                 end
             end
@@ -87,64 +83,48 @@ end
 
 -- ==================== GUI ====================
 local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))()
-local win = lib:Window("Project Era ESP", Color3.fromRGB(0, 255, 100), Enum.KeyCode.P)
+local win = lib:Window("Strucid ESP", Color3.fromRGB(0, 255, 100), Enum.KeyCode.P)
 
 local tab = win:Tab("Main")
 
-tab:Label("🕹️ Movement")
+tab:Label("🕹️ Fly")
 tab:Toggle("Enable Fly", false, function(s)
-    if s then
-        startFly()
-    else
-        endFly()
-    end
+    if s then startFly() else endFly() end
 end)
+tab:Slider("Fly Speed", 20, 150, 70, function(v) flySpeed = v end)
 
-tab:Slider("Fly Speed", 10, 200, 60, function(v)
-    flySpeed = v
-end)
-
-tab:Label("🎯 Hitbox & Wallhack")
+tab:Label("🎯 Hitbox")
 tab:Toggle("Enable Hitbox", false, function(s)
     hitboxEnabled = s
 end)
+tab:Slider("Hitbox Size", 6, 25, 14, function(v) hitboxSize = v end)
+tab:Slider("Hitbox Transparency", 0, 1, 0.65, function(v) hitboxTransparency = v end)
 
-tab:Slider("Hitbox Size", 5, 25, 12, function(v)
-    hitboxSize = v
-end)
-
-tab:Slider("Hitbox Transparency", 0, 1, 0.7, function(v)
-    hitboxTransparency = v
-end)
-
-tab:Toggle("Wallhack (Chams)", false, function(s)
+tab:Label("👁️ Wallhack")
+tab:Toggle("Enable Wallhack (Chams)", false, function(s)
     wallhackEnabled = s
 end)
 
--- ==================== MAIN LOOPS ====================
-RunService.Heartbeat:Connect(function()
-    if flying and flyChar and flyChar.PrimaryPart then
-        local camCF = flyCam.CFrame
-        local dir = Vector3.new()
-        
-        if UserInput:IsKeyDown(Enum.KeyCode.W) then dir += camCF.LookVector end
-        if UserInput:IsKeyDown(Enum.KeyCode.S) then dir -= camCF.LookVector end
-        if UserInput:IsKeyDown(Enum.KeyCode.A) then dir -= camCF.RightVector end
-        if UserInput:IsKeyDown(Enum.KeyCode.D) then dir += camCF.RightVector end
-        
-        if dir.Magnitude > 0 then
-            dir = dir.Unit
+-- ==================== LOOPS ====================
+RunService.Heartbeat:Connect(function(dt)
+    if flying and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+        local cam = workspace.CurrentCamera
+        local moveDir = Vector3.new()
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
+
+        if moveDir.Magnitude > 0 then
+            flyBV.Velocity = moveDir.Unit * flySpeed
+        else
+            flyBV.Velocity = Vector3.new()
         end
-        
-        flyBV.Velocity = dir * flySpeed
     end
 end)
 
--- Hitbox Update Loop
-RunService.Stepped:Connect(function()
-    if hitboxEnabled or wallhackEnabled then
-        updateHitboxes()
-    end
-end)
+-- Update Hitboxes & Wallhack
+RunService.Stepped:Connect(updateHitboxes)
 
-print("✅ Project Era ESP Loaded | Press P to open menu")
+print("✅ Strucid ESP Loaded | Press P to open menu")
